@@ -17,23 +17,31 @@ import fastf1
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database.connection import get_engine
 from ingestion.utils import (
-    safe_numeric, setup_fastf1_cache, get_season_id, get_event_id, upsert_session,
-    upsert_driver, upsert_constructor, insert_result, safe_int,
+    setup_fastf1_cache, get_season_id, get_event_id, upsert_session,
+    upsert_driver, upsert_constructor, insert_result, safe_int, safe_numeric,
 )
 
 
-def load_round_results(engine, year, round_no):
-    print(f"  Loading results for {year} round {round_no}...")
+def load_session_results(engine, year, round_no, identifier, session_label):
+    """
+    Loads classification results for one session (Race or Sprint) of a round.
+    identifier: FastF1 shorthand, 'R' for Race or 'S' for Sprint.
+    session_label: what we store in sessions.session_type, e.g. 'Race' or 'Sprint'.
+    """
+    print(f"  Loading {session_label} results for {year} round {round_no}...")
     try:
-        session = fastf1.get_session(year, round_no, "R")
+        session = fastf1.get_session(year, round_no, identifier)
         session.load(laps=False, telemetry=False, weather=False, messages=False)
     except Exception as e:
-        print(f"    Skipped — could not load session: {e}")
+        if identifier == "S":
+            print(f"    No sprint session this round — skipping.")
+        else:
+            print(f"    Skipped — could not load session: {e}")
         return
 
     results = session.results
     if results is None or results.empty:
-        print("    Skipped — no results available for this session yet.")
+        print(f"    Skipped — no {session_label.lower()} results available yet.")
         return
 
     with engine.begin() as conn:
@@ -47,7 +55,7 @@ def load_round_results(engine, year, round_no):
             print(f"    ERROR: round {round_no} not found for {year} — run fetch_schedule.py {year} first.")
             return
 
-        session_id = upsert_session(conn, event_id, session_type="Race", session_date=None)
+        session_id = upsert_session(conn, event_id, session_type=session_label, session_date=None)
 
         for _, row in results.iterrows():
             driver_id = upsert_driver(
@@ -69,11 +77,11 @@ def load_round_results(engine, year, round_no):
                 status=row.get("Status"),
             )
 
-    print(f"    Saved {len(results)} results.")
+    print(f"    Saved {len(results)} {session_label.lower()} results.")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Load race results for a season into Postgres.")
+    parser = argparse.ArgumentParser(description="Load race (and sprint, where applicable) results for a season.")
     parser.add_argument("year", type=int)
     parser.add_argument("--rounds", type=str, default=None,
                          help="Comma-separated rounds, e.g. 1,2,3. Default: whole season.")
@@ -90,7 +98,13 @@ def main():
         schedule = schedule[schedule["RoundNumber"].isin(wanted)]
 
     for _, event in schedule.iterrows():
-        load_round_results(engine, args.year, int(event["RoundNumber"]))
+        round_no = int(event["RoundNumber"])
+
+        load_session_results(engine, args.year, round_no, identifier="R", session_label="Race")
+        time.sleep(1)
+
+        # Most rounds don't have a sprint — this is expected to skip silently for those.
+        load_session_results(engine, args.year, round_no, identifier="S", session_label="Sprint")
         time.sleep(1)
 
     print("Done.")
