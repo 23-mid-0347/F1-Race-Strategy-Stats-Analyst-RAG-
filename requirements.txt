@@ -1,0 +1,6 @@
+fastf1>=3.7.0
+sqlalchemy>=2.0.44
+psycopg[binary]>=3.2
+python-dotenv==1.0.1
+pandas>=2.0.0
+cd 
