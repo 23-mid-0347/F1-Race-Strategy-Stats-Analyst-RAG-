@@ -141,10 +141,12 @@ def safe_int(value):
         return None
 
 def ms_from_timedelta(td):
-    """Convert a pandas Timedelta (or NaT/None) to integer milliseconds, or None."""
+    """Convert a pandas Timedelta (or NaT/None) to integer milliseconds, or None.
+    Uses integer nanosecond math (not total_seconds()*1000) to avoid floating-point
+    representation error, which can silently truncate the result by 1ms."""
     if td is None or pd.isna(td):
         return None
-    return int(td.total_seconds() * 1000)
+    return int(td.value // 1_000_000)
 
 
 def get_driver_id_by_code(conn, code: str):

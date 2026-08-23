@@ -1,3 +1,5 @@
+from typing import Optional
+from datetime import date
 from pydantic import BaseModel
 
 
@@ -26,3 +28,32 @@ class FastestLap(BaseModel):
     full_name: str
     lap_number: int
     lap_time_ms: int
+
+
+class DriverDetail(BaseModel):
+    driver_id: int
+    driver_code: str
+    full_name: str
+    nationality: Optional[str] = None
+    date_of_birth: Optional[date] = None
+
+
+class DriverStats(BaseModel):
+    driver_id: int
+    full_name: str
+    season: Optional[int] = None
+    races: int
+    wins: int
+    podiums: int
+    poles: int
+    dnfs: int
+    avg_finish: Optional[float] = None
+
+
+class EventSummary(BaseModel):
+    event_id: int
+    season: int
+    round: int
+    event_name: str
+    circuit_name: Optional[str] = None
+    event_date: Optional[date] = None
