@@ -74,5 +74,3 @@ ORDER BY res.finish_position;
 - Once this is loaded, your next step (per the plan) is writing the 5
   hardcoded SQL queries directly against this data before moving to FastAPI
   in Week 2.
-
-Backend development in progress.
