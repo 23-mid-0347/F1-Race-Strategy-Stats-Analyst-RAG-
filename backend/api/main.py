@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from api.dependencies import get_db
 from api.schemas import (
     HealthResponse, ConstructorStanding, DriverWinCount, DriverPodiumCount, FastestLap,
-    DriverDetail, DriverStats, EventSummary,
+    DriverDetail, DriverStats, EventSummary, PaginatedEvents, RaceResultRow, EventResults,
 )
 
 app = FastAPI(title="F1 Analytics API", version="0.1.0")
@@ -169,11 +169,20 @@ def get_driver_stats(
     )
 
 
-@app.get("/events", response_model=list[EventSummary])
+@app.get("/events", response_model=PaginatedEvents)
 def list_events(
     season: Optional[int] = Query(None, description="Filter to one season, e.g. 2023. Omit for all seasons."),
+    limit: int = Query(20, ge=1, le=100, description="Max results per page (1-100)."),
+    offset: int = Query(0, ge=0, description="Number of results to skip, for paging."),
     db: Session = Depends(get_db),
 ):
+    total = db.execute(text("""
+        SELECT COUNT(*)
+        FROM events e
+        JOIN seasons se ON se.season_id = e.season_id
+        WHERE (CAST(:season AS INTEGER) IS NULL OR se.year = CAST(:season AS INTEGER))
+    """), {"season": season}).scalar_one()
+
     rows = db.execute(text("""
         SELECT e.event_id, se.year AS season, e.round, e.event_name, c.name AS circuit_name, e.event_date
         FROM events e
@@ -181,12 +190,60 @@ def list_events(
         LEFT JOIN circuits c ON c.circuit_id = e.circuit_id
         WHERE (CAST(:season AS INTEGER) IS NULL OR se.year = CAST(:season AS INTEGER))
         ORDER BY se.year, e.round
-    """), {"season": season}).all()
+        LIMIT :limit OFFSET :offset
+    """), {"season": season, "limit": limit, "offset": offset}).all()
 
-    return [
+    items = [
         EventSummary(
             event_id=r.event_id, season=r.season, round=r.round,
             event_name=r.event_name, circuit_name=r.circuit_name, event_date=r.event_date,
         )
         for r in rows
     ]
+    return PaginatedEvents(total=total, limit=limit, offset=offset, items=items)
+
+
+@app.get("/events/{event_id}/results", response_model=EventResults)
+def get_event_results(event_id: int, db: Session = Depends(get_db)):
+    event = db.execute(text("""
+        SELECT e.event_id, e.event_name, e.round, se.year AS season
+        FROM events e
+        JOIN seasons se ON se.season_id = e.season_id
+        WHERE e.event_id = :event_id
+    """), {"event_id": event_id}).first()
+
+    if event is None:
+        raise HTTPException(status_code=404, detail=f"No event found with event_id {event_id}")
+
+    rows = db.execute(text("""
+        SELECT res.finish_position, res.grid_position, d.driver_code, d.full_name,
+               c.name AS constructor_name, res.points, res.status
+        FROM results res
+        JOIN sessions s ON s.session_id = res.session_id
+        JOIN drivers d ON d.driver_id = res.driver_id
+        LEFT JOIN constructors c ON c.constructor_id = res.constructor_id
+        WHERE s.event_id = :event_id AND s.session_type = 'Race'
+        ORDER BY res.finish_position ASC NULLS LAST
+    """), {"event_id": event_id}).all()
+
+    if not rows:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Event {event_id} exists but has no Race results loaded yet.",
+        )
+
+    results = [
+        RaceResultRow(
+            finish_position=r.finish_position, grid_position=r.grid_position,
+            driver_code=r.driver_code, full_name=r.full_name,
+            constructor_name=r.constructor_name,
+            points=float(r.points) if r.points is not None else 0.0,
+            status=r.status,
+        )
+        for r in rows
+    ]
+
+    return EventResults(
+        event_id=event.event_id, event_name=event.event_name,
+        season=event.season, round=event.round, results=results,
+    )
