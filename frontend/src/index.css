@@ -596,3 +596,564 @@ button {
   background: #1b1d21;
   color: #ffffff;
 }
+
+/* ── Dashboard layout update ───────────────────────────────────────────── */
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.85fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.right-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.row-arrow {
+  color: #44474e;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.race-row:hover .row-arrow {
+  color: #e10600;
+}
+
+.heading-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border: 1px solid #292b30;
+  border-radius: 7px;
+  background: #111317;
+  color: #b9bbc0;
+  font-size: 11px;
+}
+
+/* ── StatCard overrides ────────────────────────────────────────────────── */
+
+.stat-card--accent {
+  border-color: #3d1010;
+}
+
+.stat-label-top {
+  color: #636770;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.stat-subtext {
+  margin-top: 4px;
+  color: #636770;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+}
+
+/* ── Skeleton shimmer ──────────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #13151a 25%,
+    #1c1e25 50%,
+    #13151a 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease infinite;
+  border-radius: 4px;
+}
+
+/* ── Spinner ───────────────────────────────────────────────────────────── */
+
+.spinner-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+}
+
+.spinner {
+  width: var(--sz, 32px);
+  height: var(--sz, 32px);
+  border: 2px solid #1d1f26;
+  border-top-color: #e10600;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.panel-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 120px;
+}
+
+/* ── Status dot variants ───────────────────────────────────────────────── */
+
+.status-dot--online {
+  background: #4ade80;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
+}
+
+.status-dot--offline {
+  background: #e10600;
+  box-shadow: 0 0 8px rgba(225, 6, 0, 0.5);
+}
+
+.status-dot--checking {
+  background: #f59e0b;
+  animation: pulse 1.2s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* ── Mini list (dashboard panels) ─────────────────────────────────────── */
+
+.mini-list {
+  padding: 8px 0;
+}
+
+.mini-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 20px;
+  border-bottom: 1px solid #181a1e;
+}
+
+.mini-row:last-child {
+  border-bottom: 0;
+}
+
+.rank-num {
+  width: 18px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #636770;
+  flex-shrink: 0;
+}
+
+.mini-row-name {
+  flex: 1;
+  font-size: 12px;
+  color: #c8cad0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-row-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.mini-bar-wrap {
+  width: 60px;
+  height: 4px;
+  border-radius: 2px;
+  background: #1d1f26;
+  flex-shrink: 0;
+}
+
+.mini-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: #e10600;
+  transition: width 0.4s ease;
+}
+
+.mini-row-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: #f4f4f5;
+  min-width: 36px;
+  text-align: right;
+}
+
+.constructor-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Chart tooltip ─────────────────────────────────────────────────────── */
+
+.chart-tooltip {
+  padding: 9px 13px;
+  border: 1px solid #2a2c32;
+  border-radius: 7px;
+  background: #0d0e12;
+  backdrop-filter: blur(8px);
+}
+
+.chart-tooltip-name {
+  font-size: 11px;
+  color: #8b8f98;
+  margin-bottom: 3px;
+}
+
+.chart-tooltip-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f4f4f5;
+}
+
+/* ── Data tables ───────────────────────────────────────────────────────── */
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table thead tr {
+  border-bottom: 1px solid #1d1f26;
+}
+
+.data-table th {
+  padding: 10px 20px;
+  text-align: left;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #555961;
+}
+
+.data-table td {
+  padding: 12px 20px;
+  font-size: 12px;
+  color: #b0b3bb;
+  border-bottom: 1px solid #181a1e;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.data-table tbody tr:hover td {
+  background: rgba(255,255,255,0.02);
+}
+
+.table-row-clickable {
+  cursor: pointer;
+}
+
+.table-row-clickable:hover .row-arrow {
+  color: #e10600;
+}
+
+.table-primary {
+  color: #d8d9dc !important;
+  font-weight: 500;
+}
+
+.table-secondary {
+  color: #636770 !important;
+}
+
+/* ── Position badges ───────────────────────────────────────────────────── */
+
+.pos-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: #181a1e;
+  font-size: 11px;
+  font-weight: 700;
+  color: #636770;
+}
+
+.pos-gold   { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+.pos-silver { background: rgba(156, 163, 175, 0.15); color: #9ca3af; }
+.pos-bronze { background: rgba(180, 120, 60, 0.15);  color: #b47c3c; }
+
+/* ── Status chips ──────────────────────────────────────────────────────── */
+
+.status-chip {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.chip-finished {
+  background: rgba(74, 222, 128, 0.1);
+  color: #4ade80;
+}
+
+.chip-dnf {
+  background: rgba(225, 6, 0, 0.12);
+  color: #e10600;
+}
+
+/* ── Points value ──────────────────────────────────────────────────────── */
+
+.points-val {
+  font-weight: 700;
+  color: #636770;
+}
+
+.points-positive {
+  color: #f4f4f5;
+}
+
+/* ── Driver cell ───────────────────────────────────────────────────────── */
+
+.driver-cell {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.driver-code-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #181a1e;
+  color: #8b8f98;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  font-family: monospace;
+}
+
+/* ── Round badge ───────────────────────────────────────────────────────── */
+
+.round-badge {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: #181a1e;
+  color: #636770;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: monospace;
+  letter-spacing: 0.5px;
+}
+
+/* ── Constructor standings table ───────────────────────────────────────── */
+
+.constructor-cell {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.progress-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.progress-bar-wrap {
+  width: 80px;
+  height: 4px;
+  border-radius: 2px;
+  background: #1d1f26;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+/* ── Inline bar (driver wins) ──────────────────────────────────────────── */
+
+.bar-inline-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.bar-inline {
+  height: 4px;
+  min-width: 4px;
+  max-width: 80px;
+  border-radius: 2px;
+  background: #e10600;
+  transition: width 0.4s ease;
+}
+
+/* ── Tab bar ───────────────────────────────────────────────────────────── */
+
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 18px;
+  padding: 4px;
+  border: 1px solid #1d1f26;
+  border-radius: 9px;
+  background: #0a0b0e;
+  width: fit-content;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: 6px;
+  background: transparent;
+  color: #636770;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.tab-btn:hover {
+  color: #d8d9dc;
+}
+
+.tab-btn--active {
+  background: #1b1d21;
+  color: #ffffff;
+}
+
+/* ── Two-col grid (standings drivers tab) ──────────────────────────────── */
+
+.two-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+/* ── Page inner wrapper ────────────────────────────────────────────────── */
+
+.page-inner {
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+/* ── Back button ───────────────────────────────────────────────────────── */
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 20px;
+  padding: 7px 12px;
+  border: 1px solid #24262b;
+  border-radius: 7px;
+  background: transparent;
+  color: #777b84;
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.back-btn:hover {
+  color: #d8d9dc;
+  border-color: #3a3d43;
+}
+
+/* ── Error state ───────────────────────────────────────────────────────── */
+
+.error-state {
+  padding: 40px;
+  text-align: center;
+  color: #e10600;
+  font-size: 13px;
+}
+
+/* ── Coming Soon page ──────────────────────────────────────────────────── */
+
+.coming-soon-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.coming-soon-card {
+  text-align: center;
+  padding: 50px 40px;
+  border: 1px solid #202227;
+  border-radius: 12px;
+  background: #0e0f12;
+  max-width: 400px;
+}
+
+.coming-soon-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  background: #181a1e;
+  color: #636770;
+  margin-bottom: 18px;
+}
+
+.coming-soon-title {
+  margin: 0 0 10px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #f4f4f5;
+  letter-spacing: -0.5px;
+}
+
+.coming-soon-desc {
+  margin: 0 0 20px;
+  color: #636770;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.coming-soon-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 5px;
+  background: rgba(225, 6, 0, 0.12);
+  color: #e10600;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+/* ── Responsive additions ──────────────────────────────────────────────── */
+
+@media (max-width: 1050px) {
+  .two-col-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .two-col-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}

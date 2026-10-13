@@ -11,13 +11,13 @@ import {
 import { NavLink } from "react-router-dom";
 
 const navigationItems = [
-  { label: "Dashboard", icon: Home, path: "/" },
-  { label: "Races", icon: Flag, path: "/races" },
-  { label: "Drivers", icon: Users, path: "/drivers" },
-  { label: "Statistics", icon: BarChart3, path: "/statistics" },
-  { label: "Strategy", icon: Gauge, path: "/strategy" },
-  { label: "Compare", icon: Trophy, path: "/compare" },
-  { label: "AI Analyst", icon: Bot, path: "/analyst" },
+  { label: "Dashboard",   icon: Home,     path: "/" },
+  { label: "Races",       icon: Flag,     path: "/races" },
+  { label: "Drivers",     icon: Users,    path: "/drivers" },
+  { label: "Standings",   icon: BarChart3, path: "/standings" },
+  { label: "Strategy",    icon: Gauge,    path: "/strategy" },
+  { label: "Compare",     icon: Trophy,   path: "/compare" },
+  { label: "AI Analyst",  icon: Bot,      path: "/analyst" },
 ];
 
 export default function Sidebar() {
@@ -25,7 +25,6 @@ export default function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-logo">
         <div className="logo-mark">F1</div>
-
         <div>
           <h1>RaceLab</h1>
           <span>Analytics Platform</span>
@@ -37,14 +36,13 @@ export default function Sidebar() {
 
         {navigationItems.map((item) => {
           const Icon = item.icon;
-
           return (
             <NavLink
               key={item.label}
               to={item.path}
-              className={({ isActive }) =>
-                `nav-item ${isActive ? "active" : ""}`
-              }
+              end={item.path === "/"}
+              className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}
+              id={`nav-${item.label.toLowerCase().replace(" ", "-")}`}
             >
               <Icon size={19} strokeWidth={1.8} />
               <span>{item.label}</span>
@@ -54,7 +52,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="sidebar-bottom">
-        <button className="nav-item">
+        <button className="nav-item" id="nav-settings">
           <Settings size={19} strokeWidth={1.8} />
           <span>Settings</span>
         </button>
