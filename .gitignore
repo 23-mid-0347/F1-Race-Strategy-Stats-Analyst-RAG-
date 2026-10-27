@@ -61,3 +61,5 @@ yarn-error.log*
 ## Documentation
 Docs/
 
+## Vector DB
+backend/rag/chroma_db/

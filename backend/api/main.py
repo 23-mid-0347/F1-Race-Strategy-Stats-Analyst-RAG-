@@ -1,7 +1,10 @@
 import sys
 import os
 from typing import Optional
+import logging
 
+from api.rag_schemas import AnalystRequest, AnalystResponse
+from rag.assistant import answer_question
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, Depends, HTTPException, Query
@@ -518,3 +521,21 @@ def get_event_results(
         round=event.round,
         results=results,
     )
+
+@app.post("/analyst/query", response_model=AnalystResponse)
+def analyst_query(payload: AnalystRequest):
+    try:
+        return answer_question(payload.question)
+
+    except RuntimeError as exc:
+        logging.exception("RAG service unavailable")
+        raise HTTPException(
+            status_code=503,
+            detail=str(exc),
+        ) from exc
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
