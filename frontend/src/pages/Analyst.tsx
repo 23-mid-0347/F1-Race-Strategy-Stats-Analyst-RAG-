@@ -1,11 +1,8 @@
-import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent, KeyboardEvent } from "react";
 import { ArrowUp, Bot, ExternalLink, Flag, RotateCcw, Sparkles, UserRound } from "lucide-react";
-import {
-  AnalystResponse,
-  AnalystRoute,
-  AnalystSource,
-  postAnalystQuery,
-} from "../services/api";
+import { postAnalystQuery } from "../services/api";
+import type { AnalystResponse, AnalystRoute, AnalystSource } from "../services/api";
 import "./Analyst.css";
 
 type ChatRole = "user" | "assistant";
