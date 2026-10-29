@@ -163,4 +163,32 @@ export const getFastestLap = async (sessionId: number) => {
   return response.data;
 };
 
+
+// ─── AI Analyst / Hybrid RAG ──────────────────────────────────────────────────
+
+export type AnalystRoute = "stats" | "narrative" | "hybrid";
+
+export interface AnalystRequest {
+  question: string;
+}
+
+export interface AnalystSource {
+  title: string;
+  source_url: string;
+  event_name: string | null;
+  season: number | null;
+  distance: number | null;
+}
+
+export interface AnalystResponse {
+  answer: string;
+  route: AnalystRoute;
+  sources: AnalystSource[];
+}
+
+export const postAnalystQuery = async (question: string): Promise<AnalystResponse> => {
+  const response = await api.post<AnalystResponse>("/analyst/query", { question });
+  return response.data;
+};
+
 export default api;
