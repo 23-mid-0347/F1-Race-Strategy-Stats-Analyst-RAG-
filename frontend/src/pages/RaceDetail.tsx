@@ -18,13 +18,6 @@ function statusChipClass(status: string | null): string {
   return "chip-dnf";
 }
 
-function msToLapTime(ms: number): string {
-  const mins = Math.floor(ms / 60000);
-  const secs = Math.floor((ms % 60000) / 1000);
-  const millis = ms % 1000;
-  return `${mins}:${String(secs).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
-}
-
 export default function RaceDetail() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
