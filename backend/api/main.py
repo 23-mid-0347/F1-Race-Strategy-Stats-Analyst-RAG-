@@ -644,21 +644,32 @@ def get_event_strategy(event_id: int, db: Session = Depends(get_db)):
     if not session:
         return {"event": dict(event), "available": False, "message": "Race session has not been loaded.", "drivers": [], "stints": [], "pit_stops": [], "lap_count": 0, "weather_count": 0}
     session_id = session.session_id
+
     drivers = db.execute(text("""
         SELECT d.driver_id,d.driver_code,d.full_name,c.name AS constructor_name,
                res.finish_position,res.grid_position,res.points,res.status,
-               COUNT(DISTINCT l.lap_number) AS laps_recorded,
-               COUNT(DISTINCT p.pit_stop_id) AS pit_stops,
-               ROUND(AVG(l.lap_time_ms)) AS avg_lap_ms,
-               MIN(l.lap_time_ms) AS best_lap_ms
-        FROM results res JOIN drivers d ON d.driver_id=res.driver_id
+               COALESCE(laps.laps_recorded, 0) AS laps_recorded,
+               COALESCE(stops.pit_stops, 0) AS pit_stops,
+               laps.avg_lap_ms,laps.best_lap_ms
+        FROM results res
+        JOIN drivers d ON d.driver_id=res.driver_id
         LEFT JOIN constructors c ON c.constructor_id=res.constructor_id
-        LEFT JOIN lap_times l ON l.session_id=res.session_id AND l.driver_id=res.driver_id
-        LEFT JOIN pit_stops p ON p.session_id=res.session_id AND p.driver_id=res.driver_id
+        LEFT JOIN LATERAL (
+            SELECT COUNT(*) AS laps_recorded,
+                   ROUND(AVG(l.lap_time_ms)) AS avg_lap_ms,
+                   MIN(l.lap_time_ms) AS best_lap_ms
+            FROM lap_times l
+            WHERE l.session_id=res.session_id AND l.driver_id=res.driver_id
+        ) laps ON TRUE
+        LEFT JOIN LATERAL (
+            SELECT COUNT(*) AS pit_stops
+            FROM pit_stops p
+            WHERE p.session_id=res.session_id AND p.driver_id=res.driver_id
+        ) stops ON TRUE
         WHERE res.session_id=:session_id
-        GROUP BY d.driver_id,d.driver_code,d.full_name,c.name,res.finish_position,res.grid_position,res.points,res.status
         ORDER BY res.finish_position NULLS LAST
     """), {"session_id": session_id}).mappings().all()
+
     stints = db.execute(text("""
         SELECT d.driver_code,d.full_name,st.stint_number,st.compound,st.lap_start,st.lap_end
         FROM stints st JOIN drivers d ON d.driver_id=st.driver_id
@@ -676,13 +687,14 @@ def get_event_strategy(event_id: int, db: Session = Depends(get_db)):
           (SELECT COUNT(*) FROM lap_times WHERE session_id=:sid) AS lap_count,
           (SELECT COUNT(*) FROM weather WHERE session_id=:sid) AS weather_count
     """), {"sid": session_id}).mappings().one()
+    available = bool(drivers or stints or stops or availability["lap_count"])
     return {
         "event": dict(event),
-        "available": bool(drivers or stints or stops),
-        "message": None if (drivers or stints or stops) else "Race results/strategy data are not loaded yet.",
-        "drivers": [dict(r) for r in drivers],
-        "stints": [dict(r) for r in stints],
-        "pit_stops": [dict(r) for r in stops],
+        "available": available,
+        "message": None if available else "Race results and strategy data have not been loaded yet.",
+        "drivers": [dict(row) for row in drivers],
+        "stints": [dict(row) for row in stints],
+        "pit_stops": [dict(row) for row in stops],
         "lap_count": availability["lap_count"],
         "weather_count": availability["weather_count"],
     }
