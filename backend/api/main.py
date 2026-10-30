@@ -565,7 +565,8 @@ def list_drivers(
         JOIN sessions s ON s.session_id = res.session_id
         JOIN events e ON e.event_id = s.event_id
         JOIN seasons se ON se.season_id = e.season_id
-        WHERE CAST(:season AS INTEGER) IS NULL OR se.year = CAST(:season AS INTEGER)
+        WHERE s.session_type = 'Race'
+          AND (CAST(:season AS INTEGER) IS NULL OR se.year = CAST(:season AS INTEGER))
         GROUP BY d.driver_id, d.driver_code, d.full_name, d.nationality
         ORDER BY points DESC, wins DESC, d.full_name
     """), {"season": season}).mappings().all()
