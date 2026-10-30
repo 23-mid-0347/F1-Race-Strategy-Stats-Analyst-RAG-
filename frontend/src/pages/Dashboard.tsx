@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import StatCard from "../components/StatCard";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { useActiveSeason } from "../hooks/useActiveSeason";
 
 // F1 constructor colors
 const CONSTRUCTOR_COLORS: Record<string, string> = {
@@ -45,6 +46,7 @@ function formatDate(d: string | null): string {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const season = useActiveSeason();
 
   // Stat counts
   const [raceCount, setRaceCount] = useState(0);
@@ -67,9 +69,9 @@ export default function Dashboard() {
   useEffect(() => {
     // Stat cards
     Promise.all([
-      getEvents(2023, 1, 0),
-      getDriverCount(2023),
-      getConstructorCount(2023),
+      getEvents(season, 1, 0),
+      getDriverCount(season),
+      getConstructorCount(season),
     ])
       .then(([evData, drData, ctData]) => {
         setRaceCount(evData.total);
@@ -79,20 +81,20 @@ export default function Dashboard() {
       .finally(() => setStatsLoading(false));
 
     // Race schedule (first 6)
-    getEvents(2023, 6, 0)
+    getEvents(season, 6, 0)
       .then((d) => setEvents(d.items))
       .finally(() => setEventsLoading(false));
 
     // Constructor standings (top 5)
-    getConstructorStandings(2023)
+    getConstructorStandings(season)
       .then((d) => setStandings(d.slice(0, 5)))
       .finally(() => setStandingsLoading(false));
 
     // Driver wins (top 5)
-    getDriverWins(2023)
+    getDriverWins(season)
       .then((d) => setDriverWins(d.slice(0, 5)))
       .finally(() => setWinsLoading(false));
-  }, []);
+  }, [season]);
 
   const maxWins = driverWins[0]?.wins ?? 1;
   const maxPts = standings[0]?.total_points ?? 1;
@@ -102,13 +104,13 @@ export default function Dashboard() {
       {/* ── Heading ──────────────────────────────────────────────────── */}
       <section className="page-heading">
         <div>
-          <span className="eyebrow">2023 SEASON</span>
+          <span className="eyebrow">{season} SEASON</span>
           <h2>Race Intelligence</h2>
           <p>Monitor race performance, driver statistics and strategy insights.</p>
         </div>
         <div className="heading-badge">
           <CalendarDays size={14} />
-          2023 Season
+          {season} Season
         </div>
       </section>
 
@@ -117,7 +119,7 @@ export default function Dashboard() {
         <StatCard
           label="Races"
           value={raceCount}
-          subtext="2023 season"
+          subtext={`${season} season`}
           icon={Flag}
           loading={statsLoading}
         />
