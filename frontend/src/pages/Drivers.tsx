@@ -8,17 +8,25 @@ import { useActiveSeason } from "../hooks/useActiveSeason";
 export default function Drivers() {
   const season = useActiveSeason();
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadedSeason, setLoadedSeason] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const loading = loadedSeason !== season;
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
     getDrivers(season)
-      .then((rows) => { if (!cancelled) setDrivers(rows); })
-      .catch(() => { if (!cancelled) setError("Could not load driver data. Check that the backend is running and that this season has result records in PostgreSQL."); })
-      .finally(() => { if (!cancelled) setLoading(false); });
+      .then((rows) => {
+        if (cancelled) return;
+        setDrivers(rows);
+        setError(null);
+        setLoadedSeason(season);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setDrivers([]);
+        setError("Could not load driver data. Check that the backend is running and that this season has result records in PostgreSQL.");
+        setLoadedSeason(season);
+      });
     return () => { cancelled = true; };
   }, [season]);
 
@@ -33,7 +41,7 @@ export default function Drivers() {
         <div className="heading-badge"><Users size={14} /> {drivers.length} drivers</div>
       </section>
       <div className="page-note">
-        Points, wins and podiums are calculated from loaded race and sprint result rows. If a season has only partial ingestion, the numbers are partial too.
+        Points, wins and podiums are calculated from loaded race result rows. If a season has only partial ingestion, the numbers are partial too.
       </div>
       {loading ? <div className="panel-loading"><LoadingSpinner size={36} /></div>
        : error ? <div className="panel page-error">{error}</div>
