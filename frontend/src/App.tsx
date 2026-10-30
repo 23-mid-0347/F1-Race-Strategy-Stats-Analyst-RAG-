@@ -6,7 +6,9 @@ import Dashboard from "./pages/Dashboard";
 import Standings from "./pages/Standings";
 import Races from "./pages/Races";
 import RaceDetail from "./pages/RaceDetail";
-import ComingSoon from "./pages/ComingSoon";
+import Drivers from "./pages/Drivers";
+import Strategy from "./pages/Strategy";
+import Compare from "./pages/Compare";
 import Analyst from "./pages/Analyst";
 
 function App() {
@@ -24,9 +26,9 @@ function App() {
               <Route path="/standings"       element={<Standings />} />
               <Route path="/races"           element={<Races />} />
               <Route path="/races/:eventId"  element={<RaceDetail />} />
-              <Route path="/drivers"         element={<ComingSoon page="Drivers" />} />
-              <Route path="/strategy"        element={<ComingSoon page="Strategy" />} />
-              <Route path="/compare"         element={<ComingSoon page="Compare" />} />
+              <Route path="/drivers"         element={<Drivers />} />
+              <Route path="/strategy"        element={<Strategy />} />
+              <Route path="/compare"         element={<Compare />} />
               <Route path="/analyst"         element={<Analyst />} />
             </Routes>
           </main>
