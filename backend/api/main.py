@@ -578,7 +578,7 @@ def compare_drivers(
     season: Optional[int] = Query(None),
     db: Session = Depends(get_db),
 ):
-    """Compare selected drivers using recorded season results only."""
+    """Compare selected drivers using recorded race results only."""
     try:
         ids = list(dict.fromkeys(int(value) for value in driver_ids.split(",") if value.strip()))
     except ValueError as exc:
@@ -586,23 +586,43 @@ def compare_drivers(
     if not 2 <= len(ids) <= 4:
         raise HTTPException(status_code=422, detail="Select between 2 and 4 different drivers")
     rows = db.execute(text("""
-        SELECT d.driver_id, d.driver_code, d.full_name, c.name AS constructor_name,
-               COUNT(*) FILTER (WHERE s.session_type = 'Race') AS races,
-               COUNT(*) FILTER (WHERE s.session_type = 'Race' AND res.finish_position = 1) AS wins,
-               COUNT(*) FILTER (WHERE s.session_type = 'Race' AND res.finish_position BETWEEN 1 AND 3) AS podiums,
-               COALESCE(SUM(res.points), 0) AS points,
-               ROUND(AVG(res.finish_position) FILTER (WHERE s.session_type = 'Race'), 2) AS avg_finish,
-               COUNT(*) FILTER (WHERE s.session_type = 'Race' AND res.status NOT IN ('Finished') AND res.status NOT LIKE '%Lap%') AS dnfs
-        FROM drivers d
-        JOIN results res ON res.driver_id=d.driver_id
-        JOIN sessions s ON s.session_id=res.session_id
-        JOIN events e ON e.event_id=s.event_id
-        JOIN seasons se ON se.season_id=e.season_id
-        LEFT JOIN constructors c ON c.constructor_id=res.constructor_id
-        WHERE d.driver_id = ANY(CAST(:ids AS INTEGER[]))
-          AND (CAST(:season AS INTEGER) IS NULL OR se.year=CAST(:season AS INTEGER))
-        GROUP BY d.driver_id,d.driver_code,d.full_name,c.name
-        ORDER BY points DESC,wins DESC
+        WITH driver_rows AS (
+            SELECT d.driver_id, d.driver_code, d.full_name,
+                   COUNT(*) AS races,
+                   COUNT(*) FILTER (WHERE res.finish_position = 1) AS wins,
+                   COUNT(*) FILTER (WHERE res.finish_position BETWEEN 1 AND 3) AS podiums,
+                   COALESCE(SUM(res.points), 0) AS points,
+                   ROUND(AVG(res.finish_position), 2) AS avg_finish,
+                   COUNT(*) FILTER (
+                       WHERE res.status IS NOT NULL
+                         AND res.status <> 'Finished'
+                         AND res.status NOT LIKE '%Lap%'
+                   ) AS dnfs
+            FROM drivers d
+            JOIN results res ON res.driver_id=d.driver_id
+            JOIN sessions s ON s.session_id=res.session_id
+            JOIN events e ON e.event_id=s.event_id
+            JOIN seasons se ON se.season_id=e.season_id
+            WHERE d.driver_id = ANY(CAST(:ids AS INTEGER[]))
+              AND s.session_type = 'Race'
+              AND (CAST(:season AS INTEGER) IS NULL OR se.year=CAST(:season AS INTEGER))
+            GROUP BY d.driver_id,d.driver_code,d.full_name
+        ),
+        driver_teams AS (
+            SELECT DISTINCT ON (res.driver_id) res.driver_id, c.name AS constructor_name
+            FROM results res
+            JOIN sessions s ON s.session_id=res.session_id
+            JOIN events e ON e.event_id=s.event_id
+            JOIN seasons se ON se.season_id=e.season_id
+            LEFT JOIN constructors c ON c.constructor_id=res.constructor_id
+            WHERE res.driver_id = ANY(CAST(:ids AS INTEGER[]))
+              AND s.session_type='Race'
+              AND (CAST(:season AS INTEGER) IS NULL OR se.year=CAST(:season AS INTEGER))
+            ORDER BY res.driver_id, e.event_date DESC NULLS LAST, e.round DESC
+        )
+        SELECT driver_rows.*, driver_teams.constructor_name
+        FROM driver_rows LEFT JOIN driver_teams USING(driver_id)
+        ORDER BY points DESC,wins DESC,full_name
     """), {"ids": ids, "season": season}).mappings().all()
     return list(rows)
 
