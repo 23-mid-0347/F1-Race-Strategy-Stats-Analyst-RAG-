@@ -191,4 +191,48 @@ export const postAnalystQuery = async (question: string): Promise<AnalystRespons
   return response.data;
 };
 
+
+export interface DriverRow {
+  driver_id: number;
+  driver_code: string;
+  full_name: string;
+  nationality: string | null;
+  races: number;
+  wins: number;
+  podiums: number;
+  points: number;
+  avg_finish: number | null;
+}
+export interface DriverComparison extends DriverRow {
+  constructor_name: string | null;
+  dnfs: number;
+}
+export interface StrategyDriverRow {
+  driver_id: number; driver_code: string; full_name: string;
+  constructor_name: string | null; finish_position: number | null;
+  grid_position: number | null; points: number; status: string | null;
+  laps_recorded: number; pit_stops: number; avg_lap_ms: number | null; best_lap_ms: number | null;
+}
+export interface StrategyStint {
+  driver_code: string; full_name: string; stint_number: number;
+  compound: string | null; lap_start: number | null; lap_end: number | null;
+}
+export interface StrategyPitStop {
+  driver_code: string; full_name: string; stop_number: number; lap: number | null; duration_ms: number | null;
+}
+export interface EventStrategy {
+  event: { event_id: number; event_name: string; round: number; season: number };
+  available: boolean; message: string | null; drivers: StrategyDriverRow[];
+  stints: StrategyStint[]; pit_stops: StrategyPitStop[]; lap_count: number; weather_count: number;
+}
+export const getSeasons = async (): Promise<number[]> => (await api.get<number[]>("/seasons")).data;
+export const getDrivers = async (season?: number): Promise<DriverRow[]> =>
+  (await api.get<DriverRow[]>("/drivers", { params: season ? { season } : {} })).data;
+export const getDriverComparison = async (driverIds: number[], season?: number): Promise<DriverComparison[]> =>
+  (await api.get<DriverComparison[]>("/compare/drivers", {
+    params: { driver_ids: driverIds.join(","), ...(season ? { season } : {}) },
+  })).data;
+export const getEventStrategy = async (eventId: number): Promise<EventStrategy> =>
+  (await api.get<EventStrategy>(`/events/${eventId}/strategy`)).data;
+
 export default api;
