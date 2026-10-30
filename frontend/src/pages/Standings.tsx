@@ -37,12 +37,11 @@ export default function Standings() {
   const [standings, setStandings] = useState<ConstructorStanding[]>([]);
   const [wins, setWins] = useState<DriverWin[]>([]);
   const [podiums, setPodiums] = useState<DriverPodium[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadedSeason, setLoadedSeason] = useState<number | null>(null);
+  const loading = loadedSeason !== season;
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
     Promise.all([
       getConstructorStandings(season),
       getDriverWins(season),
@@ -53,9 +52,17 @@ export default function Standings() {
         setStandings(s);
         setWins(w);
         setPodiums(p);
+        setError(null);
+        setLoadedSeason(season);
       })
-      .catch(() => { if (!cancelled) setError("Could not load standings. Check the backend connection and whether this season results have been ingested."); })
-      .finally(() => { if (!cancelled) setLoading(false); });
+      .catch(() => {
+        if (cancelled) return;
+        setStandings([]);
+        setWins([]);
+        setPodiums([]);
+        setError("Could not load standings. Check the backend connection and whether this season results have been ingested.");
+        setLoadedSeason(season);
+      });
     return () => { cancelled = true; };
   }, [season]);
 
