@@ -1157,3 +1157,33 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+/* Data-driven analytics pages */
+.season-selector { gap: 8px; }
+.season-selector label { color: #686c75; font-size: 9px; font-weight: 700; letter-spacing: .9px; }
+.season-selector select, .control-select { border:1px solid #292b30; border-radius:7px; background:#111317; color:#e5e7eb; padding:9px 10px; font-size:12px; min-width:90px; }
+.season-selector select { max-width:90px; }
+.control-row { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:0 0 18px; }
+.control-group { display:flex; flex-direction:column; gap:6px; color:#777b84; font-size:10px; text-transform:uppercase; letter-spacing:.7px; }
+.primary-button, .secondary-button { padding:10px 14px; border-radius:7px; cursor:pointer; font-size:12px; font-weight:650; }
+.primary-button { background:#e10600; color:white; }
+.secondary-button { background:#191b20; color:#c7cad0; border:1px solid #2a2c32; }
+.page-error, .empty-state { padding:24px; color:#8b8f98; font-size:13px; line-height:1.6; }
+.page-error { color:#ff6b6b; }
+.page-note { padding:12px 16px; margin:0 0 16px; border:1px solid #2a2c32; background:#111317; border-radius:8px; color:#a5a8b0; font-size:12px; line-height:1.6; }
+.driver-card-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:18px; }
+.driver-card { border:1px solid #202227; border-radius:9px; background:#0e0f12; padding:18px; }
+.driver-card h3 { margin:0 0 5px; font-size:15px; }
+.driver-card p { margin:0 0 15px; color:#777b84; font-size:11px; }
+.metric-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.metric-box { padding:12px; border-radius:7px; background:#15171c; }
+.metric-box span { display:block; color:#747881; font-size:10px; margin-bottom:6px; }
+.metric-box strong { color:#f4f4f5; font-size:17px; }
+.table-scroll { overflow-x:auto; }
+.strategy-visual { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; padding:16px; }
+.strategy-mini { border:1px solid #24262b; border-radius:8px; background:#111317; padding:12px; }
+.strategy-mini h4 { margin:0 0 8px; font-size:12px; color:#ddd; }
+.stint-pill { display:inline-block; margin:2px 4px 2px 0; padding:4px 7px; border-radius:5px; background:#22252b; color:#cdd0d6; font-size:10px; }
+.stat-muted { color:#777b84; font-size:11px; }
+@media (max-width:1050px) { .driver-card-grid,.strategy-visual { grid-template-columns:1fr; } .metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:760px) { .season-selector { align-items:flex-start; flex-direction:column; } .control-row { align-items:stretch; } .control-group { min-width:100%; } .control-select { width:100%; } .metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
