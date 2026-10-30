@@ -236,3 +236,11 @@ export const getEventStrategy = async (eventId: number): Promise<EventStrategy> 
   (await api.get<EventStrategy>(`/events/${eventId}/strategy`)).data;
 
 export default api;
+export interface SeasonSummary {
+  race_count: number;
+  driver_count: number;
+  constructor_count: number;
+  lap_records: number;
+}
+export const getLapCount = async (season?: number): Promise<{ count: number }> =>
+  (await api.get<{ count: number }>("/laps/count", { params: season ? { season } : {} })).data;
