@@ -9,6 +9,8 @@ import {
   Users,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { getSeasons } from "../services/api";
 
 const navigationItems = [
   { label: "Dashboard",   icon: Home,     path: "/" },
@@ -21,6 +23,22 @@ const navigationItems = [
 ];
 
 export default function Sidebar() {
+  const [seasons, setSeasons] = useState<number[]>([]);
+  const [season, setSeason] = useState<number>(2023);
+
+  useEffect(() => {
+    getSeasons().then((available) => {
+      setSeasons(available);
+      if (available.length) setSeason((current) => available.includes(current) ? current : available[0]);
+    }).catch(() => setSeasons([]));
+  }, []);
+
+  useEffect(() => {
+    const onSeasonChange = (event: Event) => setSeason((event as CustomEvent<number>).detail);
+    window.addEventListener("f1-season-change", onSeasonChange);
+    return () => window.removeEventListener("f1-season-change", onSeasonChange);
+  }, []);
+
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
@@ -58,8 +76,21 @@ export default function Sidebar() {
         </button>
 
         <div className="season-selector">
-          <span>ACTIVE SEASON</span>
-          <strong>2023</strong>
+          <label htmlFor="sidebar-season">ACTIVE SEASON</label>
+          <select
+            id="sidebar-season"
+            aria-label="Select active season"
+            value={seasons.includes(season) ? season : (seasons[0] ?? 2023)}
+            onChange={(event) => {
+              const next = Number(event.target.value);
+              setSeason(next);
+              window.dispatchEvent(new CustomEvent("f1-season-change", { detail: next }));
+            }}
+          >
+            {(seasons.length ? seasons : [2023]).map((year) => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
         </div>
       </div>
     </aside>
