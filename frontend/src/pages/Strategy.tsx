@@ -39,6 +39,7 @@ export default function Strategy() {
     if (eventId == null) { setStrategy(null); return; }
     let cancelled = false;
     setLoadingStrategy(true); setStrategy(null);
+    setError(null);
     getEventStrategy(eventId).then((data) => { if (!cancelled) setStrategy(data); })
       .catch(() => { if (!cancelled) setError("Could not load strategy details for this race."); })
       .finally(() => { if (!cancelled) setLoadingStrategy(false); });
