@@ -665,3 +665,20 @@ def get_event_strategy(event_id: int, db: Session = Depends(get_db)):
         "lap_count": availability["lap_count"],
         "weather_count": availability["weather_count"],
     }
+
+
+@app.get("/laps/count")
+def lap_count(
+    season: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Count lap-time rows for a selected season."""
+    count = db.execute(text("""
+        SELECT COUNT(*)
+        FROM lap_times l
+        JOIN sessions s ON s.session_id = l.session_id
+        JOIN events e ON e.event_id = s.event_id
+        JOIN seasons se ON se.season_id = e.season_id
+        WHERE CAST(:season AS INTEGER) IS NULL OR se.year = CAST(:season AS INTEGER)
+    """), {"season": season}).scalar_one()
+    return {"count": count}
