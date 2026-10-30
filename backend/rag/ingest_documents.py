@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import re
 import sys
+import os
+import argparse
 import time
 from datetime import datetime
 from urllib.parse import quote
@@ -10,6 +12,11 @@ from urllib.parse import quote
 import httpx
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
+
+# Support direct script execution from backend/ as well as module execution.
+BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
 
 # Import configuration before the DB connection so root/backend .env files load.
 from rag.config import DEFAULT_SEASON
@@ -131,17 +138,25 @@ def index_article(engine, collection, event_id: int, event_name: str, season: in
 
 
 def main() -> None:
-    year = int(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_SEASON
+    parser = argparse.ArgumentParser(description="Fetch and index F1 race reports for selected events.")
+    parser.add_argument("year", type=int, nargs="?", default=DEFAULT_SEASON)
+    parser.add_argument("--rounds", help="Comma-separated round numbers, e.g. 1,2,3")
+    args = parser.parse_args()
+    year = args.year
+    wanted_rounds = {int(value) for value in args.rounds.split(",") if value.strip()} if args.rounds else None
     engine = get_engine()
     collection = get_collection()
 
     with Session(engine) as db:
         events = db.execute(
-            select(Event.event_id, Event.event_name, Season.year)
+            select(Event.event_id, Event.event_name, Season.year, Event.round)
             .join(Season, Season.season_id == Event.season_id)
             .where(Season.year == year)
             .order_by(Event.round)
         ).all()
+
+    if wanted_rounds is not None:
+        events = [event for event in events if event.round in wanted_rounds]
 
     if not events:
         raise SystemExit(f"No events found for season {year}. Load that season into PostgreSQL first.")
