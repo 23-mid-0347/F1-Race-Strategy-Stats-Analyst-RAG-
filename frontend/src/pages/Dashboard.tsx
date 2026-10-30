@@ -6,6 +6,7 @@ import {
   getConstructorCount,
   getConstructorStandings,
   getDriverWins,
+  getLapCount,
 } from "../services/api";
 import type { EventSummary, ConstructorStanding, DriverWin } from "../services/api";
 import {
@@ -52,6 +53,7 @@ export default function Dashboard() {
   const [raceCount, setRaceCount] = useState(0);
   const [driverCount, setDriverCount] = useState(0);
   const [constructorCount, setConstructorCount] = useState(0);
+  const [lapCount, setLapCount] = useState<number | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
 
   // Race schedule panel
@@ -94,6 +96,14 @@ export default function Dashboard() {
     getDriverWins(season)
       .then((d) => setDriverWins(d.slice(0, 5)))
       .finally(() => setWinsLoading(false));
+  }, [season]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getLapCount(season)
+      .then((result) => { if (!cancelled) setLapCount(result.count); })
+      .catch(() => { if (!cancelled) setLapCount(null); });
+    return () => { cancelled = true; };
   }, [season]);
 
   const maxWins = driverWins[0]?.wins ?? 1;
@@ -139,10 +149,10 @@ export default function Dashboard() {
         />
         <StatCard
           label="Lap Records"
-          value="24,420"
-          subtext="Lap times logged"
+          value={lapCount ?? "—"}
+          subtext="Lap times logged for selected season"
           icon={Gauge}
-          loading={false}
+          loading={lapCount === null}
         />
       </section>
 
