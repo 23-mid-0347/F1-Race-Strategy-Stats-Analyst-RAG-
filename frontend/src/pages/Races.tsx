@@ -4,6 +4,7 @@ import { ArrowRight, CalendarDays } from "lucide-react";
 import { getEvents } from "../services/api";
 import type { EventSummary } from "../services/api";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { useActiveSeason } from "../hooks/useActiveSeason";
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "—";
@@ -15,27 +16,35 @@ function formatDate(dateStr: string | null): string {
 }
 
 export default function Races() {
+  const season = useActiveSeason();
   const [events, setEvents] = useState<EventSummary[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    getEvents(2023, 22, 0)
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    getEvents(season, 100, 0)
       .then((data) => {
+        if (cancelled) return;
         setEvents(data.items);
         setTotal(data.total);
       })
-      .finally(() => setLoading(false));
-  }, []);
+      .catch(() => { if (!cancelled) setError("Could not load races. Check the backend connection."); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [season]);
 
   return (
     <div className="page-inner">
       <section className="page-heading">
         <div>
-          <span className="eyebrow">2023 SEASON</span>
+          <span className="eyebrow">{season} SEASON</span>
           <h2>Race Calendar</h2>
-          <p>All {total} rounds of the 2023 Formula 1 World Championship.</p>
+          <p>{total} scheduled events in the {season} Formula 1 season.</p>
         </div>
         <div className="heading-badge">
           <CalendarDays size={14} />
@@ -47,7 +56,7 @@ export default function Races() {
         <div className="panel-header">
           <div>
             <span className="eyebrow">SCHEDULE</span>
-            <h3>2023 Grand Prix Calendar</h3>
+            <h3>{season} Grand Prix Calendar</h3>
           </div>
         </div>
 
@@ -55,6 +64,10 @@ export default function Races() {
           <div className="panel-loading">
             <LoadingSpinner />
           </div>
+        ) : error ? (
+          <div className="page-error">{error}</div>
+        ) : events.length === 0 ? (
+          <div className="empty-state">No events are loaded for {season}. Load the season schedule first.</div>
         ) : (
           <table className="data-table" id="race-calendar-table">
             <thead>
