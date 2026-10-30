@@ -12,6 +12,7 @@ import type {
 import ConstructorChart from "../components/ConstructorChart";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { Medal, Trophy, BarChart2 } from "lucide-react";
+import { useActiveSeason } from "../hooks/useActiveSeason";
 
 type Tab = "constructors" | "drivers";
 
@@ -30,25 +31,33 @@ const CONSTRUCTOR_COLORS: Record<string, string> = {
 };
 
 export default function Standings() {
+  const season = useActiveSeason();
   const [tab, setTab] = useState<Tab>("constructors");
+  const [error, setError] = useState<string | null>(null);
   const [standings, setStandings] = useState<ConstructorStanding[]>([]);
   const [wins, setWins] = useState<DriverWin[]>([]);
   const [podiums, setPodiums] = useState<DriverPodium[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
     Promise.all([
-      getConstructorStandings(2023),
-      getDriverWins(2023),
-      getDriverPodiums(2023),
+      getConstructorStandings(season),
+      getDriverWins(season),
+      getDriverPodiums(season),
     ])
       .then(([s, w, p]) => {
+        if (cancelled) return;
         setStandings(s);
         setWins(w);
         setPodiums(p);
       })
-      .finally(() => setLoading(false));
-  }, []);
+      .catch(() => { if (!cancelled) setError("Could not load standings. Check the backend connection and whether this season results have been ingested."); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [season]);
 
   const maxPoints = standings[0]?.total_points ?? 1;
   const maxWins = wins[0]?.wins ?? 1;
@@ -57,7 +66,7 @@ export default function Standings() {
     <div className="page-inner">
       <section className="page-heading">
         <div>
-          <span className="eyebrow">2023 SEASON</span>
+          <span className="eyebrow">{season} SEASON</span>
           <h2>Championship Standings</h2>
           <p>Official points standings for constructors and drivers.</p>
         </div>
@@ -87,6 +96,10 @@ export default function Standings() {
         <div className="panel-loading" style={{ minHeight: 400 }}>
           <LoadingSpinner size={36} />
         </div>
+      ) : error ? (
+        <div className="panel page-error">{error}</div>
+      ) : standings.length === 0 && wins.length === 0 && podiums.length === 0 ? (
+        <div className="panel empty-state">No standings data exists for {season} yet. Load this season results first.</div>
       ) : tab === "constructors" ? (
         /* ─── Constructors Tab ─────────────────────────────────────────── */
         <>
@@ -108,7 +121,7 @@ export default function Standings() {
             <div className="panel-header">
               <div>
                 <span className="eyebrow">FULL TABLE</span>
-                <h3>2023 Constructor Standings</h3>
+                <h3>{season} Constructor Standings</h3>
               </div>
             </div>
             <table className="data-table" id="constructor-standings-table">
