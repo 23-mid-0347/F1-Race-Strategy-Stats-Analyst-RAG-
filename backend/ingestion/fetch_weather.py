@@ -23,11 +23,10 @@ def load_round_weather(engine, year, round_no):
     try:
         session = fastf1.get_session(year, round_no, "R")
         session.load(laps=False, telemetry=False, weather=True, messages=False)
+        weather = session.weather_data
     except Exception as e:
-        print(f"    Skipped — could not load session: {e}")
+        print(f"    Skipped — could not load weather for {year} round {round_no}: {e}")
         return
-
-    weather = session.weather_data
     if weather is None or weather.empty:
         print("    Skipped — no weather data available for this session yet.")
         return
