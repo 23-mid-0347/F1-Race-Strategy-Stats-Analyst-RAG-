@@ -539,3 +539,129 @@ def analyst_query(payload: AnalystRequest):
             status_code=400,
             detail=str(exc),
         ) from exc
+
+
+@app.get("/seasons", response_model=list[int])
+def list_seasons(db: Session = Depends(get_db)):
+    """Return only seasons already present in the database."""
+    return db.execute(text("SELECT year FROM seasons ORDER BY year DESC")).scalars().all()
+
+
+@app.get("/drivers")
+def list_drivers(
+    season: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Drivers appearing in race results, optionally filtered by season."""
+    return db.execute(text("""
+        SELECT d.driver_id, d.driver_code, d.full_name, d.nationality,
+               COUNT(*) FILTER (WHERE s.session_type = 'Race') AS races,
+               COUNT(*) FILTER (WHERE s.session_type = 'Race' AND res.finish_position = 1) AS wins,
+               COUNT(*) FILTER (WHERE s.session_type = 'Race' AND res.finish_position BETWEEN 1 AND 3) AS podiums,
+               COALESCE(SUM(res.points), 0) AS points,
+               ROUND(AVG(res.finish_position) FILTER (WHERE s.session_type = 'Race'), 2) AS avg_finish
+        FROM drivers d
+        JOIN results res ON res.driver_id = d.driver_id
+        JOIN sessions s ON s.session_id = res.session_id
+        JOIN events e ON e.event_id = s.event_id
+        JOIN seasons se ON se.season_id = e.season_id
+        WHERE CAST(:season AS INTEGER) IS NULL OR se.year = CAST(:season AS INTEGER)
+        GROUP BY d.driver_id, d.driver_code, d.full_name, d.nationality
+        ORDER BY points DESC, wins DESC, d.full_name
+    """), {"season": season}).mappings().all()
+
+
+@app.get("/compare/drivers")
+def compare_drivers(
+    driver_ids: str = Query(..., description="Comma-separated 2-4 driver IDs"),
+    season: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Compare selected drivers using recorded season results only."""
+    try:
+        ids = list(dict.fromkeys(int(value) for value in driver_ids.split(",") if value.strip()))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="driver_ids must be comma-separated integers") from exc
+    if not 2 <= len(ids) <= 4:
+        raise HTTPException(status_code=422, detail="Select between 2 and 4 different drivers")
+    rows = db.execute(text("""
+        SELECT d.driver_id, d.driver_code, d.full_name, c.name AS constructor_name,
+               COUNT(*) FILTER (WHERE s.session_type = 'Race') AS races,
+               COUNT(*) FILTER (WHERE s.session_type = 'Race' AND res.finish_position = 1) AS wins,
+               COUNT(*) FILTER (WHERE s.session_type = 'Race' AND res.finish_position BETWEEN 1 AND 3) AS podiums,
+               COALESCE(SUM(res.points), 0) AS points,
+               ROUND(AVG(res.finish_position) FILTER (WHERE s.session_type = 'Race'), 2) AS avg_finish,
+               COUNT(*) FILTER (WHERE s.session_type = 'Race' AND res.status NOT IN ('Finished') AND res.status NOT LIKE '%Lap%') AS dnfs
+        FROM drivers d
+        JOIN results res ON res.driver_id=d.driver_id
+        JOIN sessions s ON s.session_id=res.session_id
+        JOIN events e ON e.event_id=s.event_id
+        JOIN seasons se ON se.season_id=e.season_id
+        LEFT JOIN constructors c ON c.constructor_id=res.constructor_id
+        WHERE d.driver_id = ANY(CAST(:ids AS INTEGER[]))
+          AND (CAST(:season AS INTEGER) IS NULL OR se.year=CAST(:season AS INTEGER))
+        GROUP BY d.driver_id,d.driver_code,d.full_name,c.name
+        ORDER BY points DESC,wins DESC
+    """), {"ids": ids, "season": season}).mappings().all()
+    return list(rows)
+
+
+@app.get("/events/{event_id}/strategy")
+def get_event_strategy(event_id: int, db: Session = Depends(get_db)):
+    """Return strategy-related rows that actually exist for this race."""
+    event = db.execute(text("""
+        SELECT e.event_id,e.event_name,e.round,se.year AS season
+        FROM events e JOIN seasons se ON se.season_id=e.season_id
+        WHERE e.event_id=:event_id
+    """), {"event_id": event_id}).mappings().first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Race not found")
+    session = db.execute(text("""
+        SELECT session_id FROM sessions
+        WHERE event_id=:event_id AND session_type='Race'
+    """), {"event_id": event_id}).first()
+    if not session:
+        return {"event": dict(event), "available": False, "message": "Race session has not been loaded.", "drivers": [], "stints": [], "pit_stops": [], "lap_count": 0, "weather_count": 0}
+    session_id = session.session_id
+    drivers = db.execute(text("""
+        SELECT d.driver_id,d.driver_code,d.full_name,c.name AS constructor_name,
+               res.finish_position,res.grid_position,res.points,res.status,
+               COUNT(DISTINCT l.lap_number) AS laps_recorded,
+               COUNT(DISTINCT p.pit_stop_id) AS pit_stops,
+               ROUND(AVG(l.lap_time_ms)) AS avg_lap_ms,
+               MIN(l.lap_time_ms) AS best_lap_ms
+        FROM results res JOIN drivers d ON d.driver_id=res.driver_id
+        LEFT JOIN constructors c ON c.constructor_id=res.constructor_id
+        LEFT JOIN lap_times l ON l.session_id=res.session_id AND l.driver_id=res.driver_id
+        LEFT JOIN pit_stops p ON p.session_id=res.session_id AND p.driver_id=res.driver_id
+        WHERE res.session_id=:session_id
+        GROUP BY d.driver_id,d.driver_code,d.full_name,c.name,res.finish_position,res.grid_position,res.points,res.status
+        ORDER BY res.finish_position NULLS LAST
+    """), {"session_id": session_id}).mappings().all()
+    stints = db.execute(text("""
+        SELECT d.driver_code,d.full_name,st.stint_number,st.compound,st.lap_start,st.lap_end
+        FROM stints st JOIN drivers d ON d.driver_id=st.driver_id
+        WHERE st.session_id=:session_id
+        ORDER BY d.full_name,st.stint_number
+    """), {"session_id": session_id}).mappings().all()
+    stops = db.execute(text("""
+        SELECT d.driver_code,d.full_name,p.stop_number,p.lap,p.duration_ms
+        FROM pit_stops p JOIN drivers d ON d.driver_id=p.driver_id
+        WHERE p.session_id=:session_id
+        ORDER BY p.lap NULLS LAST,d.full_name
+    """), {"session_id": session_id}).mappings().all()
+    availability = db.execute(text("""
+        SELECT
+          (SELECT COUNT(*) FROM lap_times WHERE session_id=:sid) AS lap_count,
+          (SELECT COUNT(*) FROM weather WHERE session_id=:sid) AS weather_count
+    """), {"sid": session_id}).mappings().one()
+    return {
+        "event": dict(event),
+        "available": bool(drivers or stints or stops),
+        "message": None if (drivers or stints or stops) else "Race results/strategy data are not loaded yet.",
+        "drivers": [dict(r) for r in drivers],
+        "stints": [dict(r) for r in stints],
+        "pit_stops": [dict(r) for r in stops],
+        "lap_count": availability["lap_count"],
+        "weather_count": availability["weather_count"],
+    }
