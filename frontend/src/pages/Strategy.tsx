@@ -11,7 +11,9 @@ function lapTime(ms: number | null): string {
   const minutes = Math.floor(total / 60000);
   const seconds = Math.floor((total % 60000) / 1000);
   const millis = Math.round(total % 1000);
-  return minutes > 0 ? minutes + ":" + String(seconds).padStart(2, "0") + "." + String(millis).padStart(3, "0") : (total / 1000).toFixed(3) + " s";
+  return minutes > 0
+    ? minutes + ":" + String(seconds).padStart(2, "0") + "." + String(millis).padStart(3, "0")
+    : (total / 1000).toFixed(3) + " s";
 }
 
 export default function Strategy() {
@@ -19,52 +21,81 @@ export default function Strategy() {
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [eventId, setEventId] = useState<number | null>(null);
   const [strategy, setStrategy] = useState<EventStrategy | null>(null);
-  const [loadingEvents, setLoadingEvents] = useState(true);
-  const [loadingStrategy, setLoadingStrategy] = useState(false);
+  const [loadedEventSeason, setLoadedEventSeason] = useState<number | null>(null);
+  const [loadedStrategyEventId, setLoadedStrategyEventId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const loadingEvents = loadedEventSeason !== season;
+  const loadingStrategy = eventId !== null && loadedStrategyEventId !== eventId;
 
   useEffect(() => {
     let cancelled = false;
-    setLoadingEvents(true); setError(null); setStrategy(null); setEventId(null);
-    getEvents(season, 100, 0).then((data) => {
-      if (cancelled) return;
-      setEvents(data.items);
-      setEventId(data.items[0]?.event_id ?? null);
-    }).catch(() => { if (!cancelled) setError("Could not load this season's event calendar."); })
-      .finally(() => { if (!cancelled) setLoadingEvents(false); });
+    getEvents(season, 100, 0)
+      .then((data) => {
+        if (cancelled) return;
+        setEvents(data.items);
+        setEventId(data.items[0]?.event_id ?? null);
+        setStrategy(null);
+        setError(null);
+        setLoadedStrategyEventId(null);
+        setLoadedEventSeason(season);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setEvents([]);
+        setEventId(null);
+        setStrategy(null);
+        setError("Could not load this season's event calendar.");
+        setLoadedStrategyEventId(null);
+        setLoadedEventSeason(season);
+      });
     return () => { cancelled = true; };
   }, [season]);
 
   useEffect(() => {
-    if (eventId == null) { setStrategy(null); return; }
+    if (loadingEvents || eventId === null) return;
     let cancelled = false;
-    setLoadingStrategy(true); setStrategy(null);
-    setError(null);
-    getEventStrategy(eventId).then((data) => { if (!cancelled) setStrategy(data); })
-      .catch(() => { if (!cancelled) setError("Could not load strategy details for this race."); })
-      .finally(() => { if (!cancelled) setLoadingStrategy(false); });
+    getEventStrategy(eventId)
+      .then((data) => {
+        if (cancelled) return;
+        setStrategy(data);
+        setError(null);
+        setLoadedStrategyEventId(eventId);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setStrategy(null);
+        setError("Could not load strategy details for this race.");
+        setLoadedStrategyEventId(eventId);
+      });
     return () => { cancelled = true; };
-  }, [eventId]);
+  }, [eventId, loadingEvents]);
 
   const groupedStints = useMemo(() => {
     const map = new Map<string, EventStrategy["stints"]>();
     for (const stint of strategy?.stints ?? []) {
       const current = map.get(stint.full_name) ?? [];
-      current.push(stint); map.set(stint.full_name, current);
+      current.push(stint);
+      map.set(stint.full_name, current);
     }
     return Array.from(map.entries());
   }, [strategy]);
   const selectedEvent = events.find((event) => event.event_id === eventId);
 
   return <div className="page-inner">
-    <section className="page-heading"><div><span className="eyebrow">RACE STRATEGY · {season}</span><h2>Strategy Explorer</h2><p>Explore recorded tyre stints, pit stops and lap performance from the selected race.</p></div></section>
-    <div className="control-row"><label className="control-group">Race
-      <select className="control-select" value={eventId ?? ""} onChange={(event) => setEventId(Number(event.target.value))} disabled={loadingEvents || !events.length}>
-        {events.map((event) => <option value={event.event_id} key={event.event_id}>R{event.round} · {event.event_name}</option>)}
-      </select></label><span className="stat-muted">{selectedEvent?.event_date ?? ""}</span></div>
+    <section className="page-heading">
+      <div><span className="eyebrow">RACE STRATEGY · {season}</span><h2>Strategy Explorer</h2><p>Explore recorded tyre stints, pit stops and lap performance from the selected race.</p></div>
+    </section>
+    <div className="control-row">
+      <label className="control-group">Race
+        <select className="control-select" value={eventId ?? ""} onChange={(event) => setEventId(Number(event.target.value))} disabled={loadingEvents || !events.length}>
+          {events.map((event) => <option value={event.event_id} key={event.event_id}>R{event.round} · {event.event_name}</option>)}
+        </select>
+      </label>
+      <span className="stat-muted">{selectedEvent?.event_date ?? ""}</span>
+    </div>
     {loadingEvents || loadingStrategy ? <div className="panel-loading"><LoadingSpinner size={36}/></div>
      : error ? <div className="panel page-error">{error}</div>
-     : !strategy ? <div className="panel empty-state">No race selected.</div>
+     : !strategy ? <div className="panel empty-state">No race selected. Load the season schedule before exploring strategy data.</div>
      : <>
         <div className="page-note">{strategy.available ? "Showing database-recorded values only." : (strategy.message ?? "Strategy data unavailable.")} A scheduled event may exist without imported race data.</div>
         <section className="stats-grid">
