@@ -20,21 +20,27 @@ export default function Races() {
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loadedSeason, setLoadedSeason] = useState<number | null>(null);
+  const loading = loadedSeason !== season;
   const navigate = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
     getEvents(season, 100, 0)
       .then((data) => {
         if (cancelled) return;
         setEvents(data.items);
         setTotal(data.total);
+        setError(null);
+        setLoadedSeason(season);
       })
-      .catch(() => { if (!cancelled) setError("Could not load races. Check the backend connection."); })
-      .finally(() => { if (!cancelled) setLoading(false); });
+      .catch(() => {
+        if (cancelled) return;
+        setEvents([]);
+        setTotal(0);
+        setError("Could not load races. Check the backend connection.");
+        setLoadedSeason(season);
+      });
     return () => { cancelled = true; };
   }, [season]);
 
